@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+require 'daemons'
+require 'denouncer_aggregator'
+
+Daemons.run_proc('denouncer_aggregator_proc.rb') do
+  DenouncerAggregator.init_configuration
+  @amqp = DenouncerAggregator::Modules::Amqp.new
+  @amqp.initialize_queues(["my_app.errors", "app2.errors"])
+  loop do    
+    @amqp.fetch_notifications
+    sleep(1)
+  end
+end
