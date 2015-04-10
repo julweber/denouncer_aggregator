@@ -29,11 +29,11 @@ The main configuration is read from environment variables. These are the availab
 
 You can start the daemon with the following command
 
-   bundle exec bin/denouncer_aggregator start
+    bundle exec bin/denouncer_aggregator start
 
 You can stop the daemon using 
 
-		bundle exec bin/denouncer_aggregator stop
+    bundle exec bin/denouncer_aggregator stop
 
 
 ## Contributing
