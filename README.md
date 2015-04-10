@@ -18,9 +18,23 @@ Or install it yourself as:
 
     $ gem install denouncer_aggregator
 
+## Configuration
+
+The main configuration is read from environment variables. These are the available variables:
+* PID_DIR - The pidfile directory (default: /tmp/) (optional)
+* LOG_FILE - The logfile path (default: /tmp/denouncer_aggregator.log) (optional)
+* LOG_LEVEL - The log level (default: 1 -> INFO) (0->Debug, 1->INFO, ...)
+
 ## Usage
 
-TODO: Write usage instructions here
+You can start the daemon with the following command
+
+   bundle exec bin/denouncer_aggregator start
+
+You can stop the daemon using 
+
+		bundle exec bin/denouncer_aggregator stop
+
 
 ## Contributing
 

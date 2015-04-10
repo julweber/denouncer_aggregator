@@ -10,26 +10,60 @@ module DenouncerAggregator
       DEFAULT_USERNAME = 'guest'
       DEFAULT_PASSWORD = 'guest'
 
-      def initialize(config = {})
+      def initialize(config = {}, queue_names = [])
         @config = config
-        connection
-        queues
-        channel
-        exchange
+        @queue_names = queue_names
       end
 
       def config
         @config
       end
 
-      def initialize_queues(queue_names)
-        queue_names.each do |q|
-          queue q
+      def queue_names
+        @queue_names
+      end
+
+      def connect
+        if @con.nil?
+          DenouncerAggregator.logger.info "Establishing AMQP Connection..."
+          connection
+          channel
+          exchange
+          initialize_queues
+          DenouncerAggregator.logger.info "AMQP Connection established!"
         end
-        queues
+        nil
+      rescue => err
+        DenouncerAggregator.logger.error "An error occured while connecting: #{err.message} !"
+        reconnect
+      end
+
+      def disconnect
+        unless @con.nil?
+          DenouncerAggregator.logger.info "Disconnecting AMQP Connection..."
+          @channel = nil
+          @queues = nil
+          @channel = nil
+          @exchange = nil
+          @con.stop
+          @con = nil
+          DenouncerAggregator.logger.info "Disconnected AMQP Connection!"
+        end
+        nil
+      end
+
+      def reconnect
+        DenouncerAggregator.logger.info "Reconnecting..."
+        disconnect
+        connect
+      rescue => err
+        DenouncerAggregator.logger.error "An error occured while reconnecting: #{err.message} !"
+        sleep(0.2)
+        retry
       end
 
       def fetch_notifications
+        DenouncerAggregator.logger.debug "Fetching notifications..."
         messages = Array.new
         queues.each do |k,q|
           if q.message_count > 0
@@ -41,10 +75,23 @@ module DenouncerAggregator
             end
           end
         end
+        DenouncerAggregator.logger.debug "Fetched notifications!"
         messages
+      rescue => err
+        DenouncerAggregator.logger.error "An error occured while fetching notifications: #{err.message} !"
+        reconnect
+        retry
       end
 
       private
+
+      def initialize_queues
+        DenouncerAggregator.logger.info "Initializing Queues: #{queue_names}"
+        queue_names.each do |q|
+          queue q
+        end
+        queues
+      end
 
       def exchange
         @exchange = channel.default_exchange if @exchange.nil?
@@ -65,7 +112,8 @@ module DenouncerAggregator
             port: config[:port],
             username: config[:username],
             password: config[:password],
-            threaded: true
+            threaded: true,
+            logger: DenouncerAggregator.logger
           }
           @con = Bunny.new connection_hash
           @con.start
@@ -87,6 +135,7 @@ module DenouncerAggregator
         @queues = Hash.new if @queues.nil?
         @queues
       end
+
     end
   end
 end

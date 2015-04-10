@@ -3,12 +3,42 @@ require 'rubygems'
 require 'daemons'
 require 'denouncer_aggregator'
 
-Daemons.run_proc('denouncer_aggregator_proc.rb') do
-  DenouncerAggregator.init_configuration
-  @amqp = DenouncerAggregator::Modules::Amqp.new
-  @amqp.initialize_queues(["my_app.errors", "app2.errors"])
-  loop do    
-    @amqp.fetch_notifications
-    sleep(1)
-  end
+DEFAULT_PID_DIR='/tmp/'
+DEFAULT_LOG_FILE='/tmp/denouncer_aggregator.log'
+DEFAULT_LOG_LEVEL=1
+
+if ENV['PID_DIR'].nil?
+  @pid_dir = DEFAULT_PID_DIR
+else
+  @pid_dir = ENV['PID_DIR']
+end
+
+if ENV['LOG_FILE'].nil?
+  @log_file = DEFAULT_LOG_FILE
+else
+  @log_file = ENV['LOG_FILE']
+end
+
+if ENV['LOG_LEVEL'].nil?
+  @log_level = DEFAULT_LOG_LEVEL
+else
+  @log_level = ENV['LOG_LEVEL']
+end
+
+puts "--------------------------------"
+puts "----- denouncer_aggregator -----"
+puts "--------------------------------"
+puts "PID_DIR: #{@pid_dir}"
+puts "LOG_FILE: #{@log_file}"
+puts "LOG_LEVEL: #{@log_level}"
+
+Daemons.run_proc('denouncer_aggregator',
+  dir: @pid_dir) do
+    DenouncerAggregator.init_configuration(log_file: @log_file, log_level: @log_level)
+    @amqp = DenouncerAggregator::Modules::Amqp.new({}, ["my_app.errors", "app2.errors"])
+    @amqp.connect
+    loop do
+      @amqp.fetch_notifications
+      sleep(0.2)
+    end
 end
